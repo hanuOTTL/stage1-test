@@ -1,47 +1,32 @@
 import React, { useContext } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { Send } from "../Icons/Icons";
 import { ChatContext } from "../../contexts/ChatContext";
+import dayjs from "dayjs";
 
 const SearchBar = () => {
   const {
     searchVal,
     setSearchVal,
-    setChatData,
-    chatData,
     sendMessage,
-    sessionId,
-    style,
   } = useContext(ChatContext);
 
-  const hanldeSend = (e) => {
+  const handleSend = (e) => {
     e.preventDefault();
+
+    // Clean up the search value (trim whitespace)
     var repl = searchVal.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
+    
     if (repl !== "") {
-      const socMsg = {
-        msg_type: "query_req",
-        query: repl,
-        msg_id: uuidv4(),
-        session_id: sessionId,
-        env: "staging",
-        stream: false,
-        filters: {},
-        tenant: "",
-      };
-      sendMessage(socMsg);
-      // if (repl !== "") {
-      //   const newchat = {
-      //     msg: repl,
-      //     user: "sender",
-      //   };
-      //   console.log(newchat, "newChat");
-      //   setChatData([...chatData, newchat]);
+      // Send the message by calling sendMessage with the cleaned-up reply
+      sendMessage(repl);
     }
+
+    // Clear the input field after sending the message
     setSearchVal("");
   };
 
   return (
-    <div className="mb-[16px] mx-[12px] py-[2px] px-[12px] border border-gray-300 rounded-xl">
+    <div className="mx-[12px] py-[2px] px-[12px] border border-gray-300 rounded-xl">
       <div className="flex justify-between items-center">
         <form className="flex items-center justify-between w-full">
           <input
@@ -54,10 +39,10 @@ const SearchBar = () => {
 
           <button
             type="submit"
-            className=" w-[36px] h-[36px] flex items-center justify-end rounded-3xl outline-none"
-            onClick={hanldeSend}
+            className="w-[36px] h-[36px] flex items-center justify-end rounded-3xl outline-none"
+            onClick={handleSend} // Attach the handleSend function
           >
-            <Send color='#34143E' />
+            <Send color="#34143E" />
           </button>
         </form>
       </div>

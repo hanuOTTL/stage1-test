@@ -9,6 +9,7 @@ const languageMap = {
   python: 71,
 };
 
+
 export const LanguageProvider = ({ children }) => {
   const getInitialLanguage = () => {
     const savedLanguageName = localStorage.getItem("appLanguageName");
@@ -39,6 +40,7 @@ export const LanguageProvider = ({ children }) => {
     localStorage.setItem("appLanguageName", lowerCaseLanguage);
     localStorage.setItem("appLanguageId", newLanguageId);
   };
+
 
   return (
     <LanguageContext.Provider value={{ language, languageId, setInitialLanguage }}>

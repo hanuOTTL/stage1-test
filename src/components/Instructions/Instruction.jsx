@@ -16,7 +16,7 @@ const Instructions = () => {
       style={{
         display: "grid",
         gridTemplateColumns: "50% 50%",
-        height: "88vh",
+        height: "92vh",
       }}
     >
         <div className="pr-1">

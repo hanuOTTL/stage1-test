@@ -1,12 +1,24 @@
 import MonacoEditor from "react-monaco-editor";
 import { useContext, useState, useEffect } from "react";
 import axios from "axios";
+import apiClient from "../../api/Axios";
 import { LanguageContext } from "../../contexts/LanguageContext";
-import { generateJavaScriptTemplate } from "../CodingTemplates/CodingTemplates";
-import { generateJavaTemplate } from "../CodingTemplates/CodingTemplates";
-import { generatePythonTemplate } from "../CodingTemplates/CodingTemplates";
+import {
+  generateJavaScriptTemplate,
+  generateJavaTemplate,
+  generatePythonTemplate,
+} from "../CodingTemplates/CodingTemplates";
+import { useNavigate } from "react-router-dom";
+import {
+  generateJavaSolveFunction,
+  generateJavascriptSolveFunction,
+  generatePythonSolveFunction,
+} from "../CodingTemplates/InputTemplates";
+import { useLocation } from "react-router-dom";
 
 const CodeEditor = ({
+  outputDetails,
+  messageDetails,
   setOutputDetails,
   setConsoleDetails,
   testCaseValues,
@@ -14,10 +26,17 @@ const CodeEditor = ({
   setTimeDetails,
   setMessageDetails,
   inputType,
+  nextFunction,
+  setAnswer,
 }) => {
   const [candidateCode, setCandidateCode] = useState("");
   const [finalSourceCode, setFinalSourceCode] = useState("");
   const { language, languageId } = useContext(LanguageContext);
+  const [codeOutput, setCodeOutput] = useState("");
+
+  const location = useLocation();
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     let generatedCode = "";
@@ -26,7 +45,6 @@ const CodeEditor = ({
       generatedCode = generateJavaScriptTemplate({ candidateCode, inputType });
     } else if (language === "java" && candidateCode != "") {
       generatedCode = generateJavaTemplate({ candidateCode, inputType });
-      console.log(generatedCode);
     } else if (language === "python" && candidateCode != "") {
       generatedCode = generatePythonTemplate({ candidateCode, inputType });
     }
@@ -34,7 +52,65 @@ const CodeEditor = ({
     setFinalSourceCode(generatedCode);
   }, [language, candidateCode, inputType]);
 
-  console.log(finalSourceCode);
+  useEffect(() => {
+    let generatedSolveFunction = "";
+    if (language === "javascript") {
+      generatedSolveFunction = generateJavascriptSolveFunction({
+        candidateCode,
+        inputType,
+      });
+    } else if (language === "java") {
+      generatedSolveFunction = generateJavaSolveFunction({
+        candidateCode,
+        inputType,
+      });
+    } else if (language === "python") {
+      generatedSolveFunction = generatePythonSolveFunction({
+        candidateCode,
+        inputType,
+      });
+    }
+
+    setCandidateCode(generatedSolveFunction);
+  }, []);
+
+  if (location.pathname == "question") {
+    const output = testCaseValues?.map((testCase, index) => {
+      const passed = messageDetails[index] === "Accepted";
+      return {
+        testCase: testCase.input,
+        expectedOutput: testCase.expectedOutput,
+        actualOutput: outputDetails[index]?.trim(),
+        passed: passed,
+      };
+    });
+
+    setCodeOutput(output);
+  }
+
+  const submitAnswer = async () => {
+    try {
+      const answerData = {
+        candidateId: "67e3cd9be621dc006fb7469c",
+        interviewId: "67e3ce19e621dc006fb746a4",
+        questionId: "67e24c28cd6210ac580bcdd2",
+        answerText: candidateCode,
+        codeOutput: codeOutput,
+      };
+
+      console.log(answerData);
+      const response = await apiClient.post("/answer", answerData);
+
+      console.log("Answer submitted successfully:", response.data);
+      nextFunction();
+    } catch (error) {
+      console.error(
+        "Failed to submit answer:",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  };
 
   const handleRunCode = () => {
     setOutputDetails("");
@@ -47,7 +123,7 @@ const CodeEditor = ({
           language_id: languageId,
           source_code: btoa(finalSourceCode),
           stdin: btoa(testCase?.input),
-          expected_output: btoa(testCase?.expected_output),
+          expected_output: btoa(testCase?.expectedOutput),
         };
       }),
     };
@@ -106,39 +182,33 @@ const CodeEditor = ({
 
     try {
       let response = await axios.request(options);
-      let submissions = response?.data?.submissions; // Extract array of submissions
+      let submissions = response?.data?.submissions;
 
-      // Iterate over the submissions array
       submissions.forEach((submission, index) => {
-        let statusId = submission?.status?.id; // Get status ID of the submission
+        let statusId = submission?.status?.id;
 
         if (statusId === 1 || statusId === 2) {
-          // If the status is 1 (In Queue) or 2 (Processing), check again after a delay
           setTimeout(() => {
-            checkStatus(tokens); // Continue polling for all tokens
+            checkStatus(tokens);
           }, 3000);
           return;
         } else {
-          // If the status is "Wrong Answer" (statusId: 4) or successful submission (statusId: other than 4)
-          const stderr = submission?.stderr ? atob(submission?.stderr) : ""; // Set stderr if present, otherwise leave it empty
-          const stdout = submission?.stdout || "No output available"; // Get stdout or fallback message
+          const stderr = submission?.stderr ? atob(submission?.stderr) : "";
+          const stdout = submission?.stdout || "No output available";
 
-          // Handle console output (stderr for both cases)
           setConsoleDetails((prevConsoleDetails) => {
             const newConsoleDetails = [...prevConsoleDetails];
-            newConsoleDetails[index] = stderr; // Assign stderr or empty string
+            newConsoleDetails[index] = stderr;
             return newConsoleDetails;
           });
 
-          // Handle output details (stdout for both cases)
           setOutputDetails((prevOutputDetails) => {
             const newOutputDetails = [...prevOutputDetails];
             newOutputDetails[index] =
-              stdout !== "No output available" ? atob(stdout) : ""; // Only decode stdout if it has content
+              stdout !== "No output available" ? atob(stdout) : "";
             return newOutputDetails;
           });
 
-          // Handle message, time, and memory usage for all cases
           setMessageDetails((prevMessageDetails) => {
             const newMessageDetails = [...prevMessageDetails];
             newMessageDetails[index] =
@@ -161,41 +231,44 @@ const CodeEditor = ({
       });
     } catch (err) {
       console.log("err", err);
-      // Handle error appropriately
     }
   };
 
   return (
     <div className="rounded-md border-2 border-[#EBEAE6] h-full overflow-hidden">
-      <div className="w-full bg-box-header rounded-t-button py-5 px-4 flex justify-between">
-        <div className="bg-white rounded-button inline-block px-3.5 py-2.5">
+      <div className="w-full bg-box-header rounded-t-button py-2 px-2 flex justify-between">
+        <div className="bg-white rounded-button inline-block px-2 py-1.5">
           {language.charAt(0).toUpperCase() + language.slice(1).toLowerCase()}
         </div>
         <div>
           <button
-            className="bg-white rounded-button inline-block px-3.5 py-2.5 mx-5  cursor-pointer"
+            className="bg-white rounded-button inline-block px-2 py-1.5 mx-2 cursor-pointer"
             onClick={handleRunCode}
           >
             Run Code
           </button>
 
-          <button className="bg-background-green text-white rounded-button inline-block px-3.5 py-2.5 mx-5 cursor-pointer">
+          <button
+            className="bg-background-green text-white rounded-button inline-block px-2 py-1.5 mx-2 cursor-pointer"
+            onClick={() => submitAnswer()}
+          >
             Submit and Next
           </button>
         </div>
       </div>
 
-      <div className="w-full min-h-[250px]">
+      <div className="w-full min-h-[50%]">
         <MonacoEditor
           theme="vs-light"
           language="python"
           value={candidateCode}
-          defaultValue="Enter Code here"
-          onChange={(value) => setCandidateCode(value)}
+          defaultValue="const solve(arr){}"
+          onChange={(value) => {
+            setCandidateCode(value);
+            setAnswer(value);
+          }}
           className="w-full min-h-[250px]"
         />
-        {/* {processing && <div>Processing</div>}
-      {OutputDetails} */}
       </div>
     </div>
   );

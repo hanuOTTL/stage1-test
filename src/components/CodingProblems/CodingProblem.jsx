@@ -1,29 +1,55 @@
+import { useContext, useEffect } from "react";
 import CodeEditor from "./CodeEditor";
 import TestCases from "./TestCases";
 import ProblemStatement from "./ProblemStatement";
-import Conversation from "./Conversation";
-import ExpandableChatWindow from "../ExpandableChatWindow/ExpandableChatWindow";
+import MainChatComponent from "./MainChatComponentCodeEditor";
+import { ChatContext } from "../../contexts/ChatContext";
 
 import { useState } from "react";
 
-const CodingProblem = () => {
+const CodingProblem = ({testCases, questionText, id, nextFunction}) => {
   const [outputDetails, setOutputDetails] = useState([]);
   const [consoleDetails, setConsoleDetails] = useState([]);
   const [messageDetails, setMessageDetails] = useState([]);
   const [memoryDetails, setMemoryDetails] = useState([]);
   const [timeDetails, setTimeDetails] = useState([]);
-  const [inputType, setInputType] = useState("array");
+  const [inputType, setInputType] = useState("integer");
   const [question, setQuestion] = useState();
+  const [answer, setAnswer] = useState("");
+
+  const {sendInitialAckMessage} = useContext(ChatContext)
+
+  const interviewId = "67e3ce19e621dc006fb746a4"
+
+  // interviewId,
+  //   predefinedQuestionId,
+  //   answer
+
+
+  const allMessagesAccepted = messageDetails.length > 0 && messageDetails.every(
+    (message) => message === "Accepted"
+  );
+
+ 
+
+  useEffect(()=>{
+    if (allMessagesAccepted) {
+      sendInitialAckMessage(interviewId, id, answer);
+    }
+  },[allMessagesAccepted])
+
+  
+
   const testCaseValues = {
-    "Test Case 1": {
+    "Case 1": {
       input: "1, 2, 3, 4, 5",
       expected_output: "15",
     },
-    "Test Case 2": {
+    "Case 2": {
       input: "10, 20, 30, 40",
       expected_output: "100",
     },
-    "Test Case 3": {
+    "Case 3": {
       input: "-5, -10, 15",
       expected_output: "0",
     },
@@ -31,27 +57,33 @@ const CodingProblem = () => {
 
   return (
     <div
-      className="pt-2 px-2"
+      className="py-2 px-2"
       style={{
         display: "grid",
         gridTemplateColumns: "45% 55%",
-        height: "85vh",
+        height: "92vh",
+        minHeight: 0,
       }}
     >
       <div
         className="h-full"
         style={{
           display: "grid",
-          gridTemplateRows: "45% 50%",
-          height: "100%",
+          gridTemplateRows: allMessagesAccepted?"54px 1fr": "1fr 54px", 
+          minHeight: 0,
         }}
       >
-        <div className="pb-2">
-          <ProblemStatement question={question} />
+        <div
+          className={`pb-2 `}
+          style={{ minHeight: 0 }}
+        >
+          <ProblemStatement question={questionText} />
         </div>
 
-        <div>
-          <Conversation />
+        <div
+          style={{ minHeight: '54px' }}
+        >
+          <MainChatComponent allMessagesAccepted={allMessagesAccepted}/>
         </div>
       </div>
 
@@ -59,38 +91,36 @@ const CodingProblem = () => {
         className="h-full"
         style={{
           display: "grid",
-          gridTemplateRows: "45% 50%",
-          height: "100%",
-          maxHeight: "calc(90vh-50px)",
+          gridTemplateRows: "1fr 1fr",
+          minHeight: 0,
         }}
       >
-        <div className="grid">
-          <div className="col-start-1 row-start-1 pl-1">
-            <div className="px-2 pb-2">
-              <CodeEditor
-                setOutputDetails={setOutputDetails}
-                setConsoleDetails={setConsoleDetails}
-                testCaseValues={testCaseValues}
-                setMemoryDetails={setMemoryDetails}
-                setTimeDetails={setTimeDetails}
-                setMessageDetails={setMessageDetails}
-                inputType={inputType}
-              />
-            </div>
-            <div className="px-2">
-              <TestCases
-                outputDetails={outputDetails}
-                consoleDetails={consoleDetails}
-                testCaseValues={testCaseValues}
-                messageDetails={messageDetails}
-                memoryDetails={memoryDetails}
-                timeDetails={timeDetails}
-              />
-            </div>
-          </div>
-          <div className="col-start-1 row-start-1 pl-1 ">
-            <ExpandableChatWindow />
-          </div>
+        <div className="px-2 pb-2" style={{ minHeight: 0 }}>
+          <CodeEditor
+            setOutputDetails={setOutputDetails}
+            messageDetails={messageDetails}
+            outputDetails={outputDetails}
+            setConsoleDetails={setConsoleDetails}
+            testCaseValues={testCases}
+            setMemoryDetails={setMemoryDetails}
+            setTimeDetails={setTimeDetails}
+            setMessageDetails={setMessageDetails}
+            inputType={inputType}
+            nextFunction={nextFunction}
+            id={id}
+            setAnswer={setAnswer}
+          />
+        </div>
+
+        <div className="px-2" style={{ minHeight: 0 }}>
+          <TestCases
+            outputDetails={outputDetails}
+            consoleDetails={consoleDetails}
+            testCaseValues={testCases}
+            messageDetails={messageDetails}
+            memoryDetails={memoryDetails}
+            timeDetails={timeDetails}
+          />
         </div>
       </div>
     </div>

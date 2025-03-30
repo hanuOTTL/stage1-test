@@ -1,5 +1,4 @@
 const QuestionBox = ({ question, selected, setSelected, optionKey,setIsSelectedQuestion }) => {
-  console.log(selected);
   return (
     <label className="inline-flex items-center mb-6">
       <input
